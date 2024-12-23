@@ -1,0 +1,55 @@
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python distribution files
+*.egg-info/
+*.egg
+*.whl
+*.tar.gz
+dist/
+build/
+
+# Virtual environment directories
+.venv/
+env/
+venv/
+
+# Python-specific IDEs or editors
+.vscode/
+.idea/
+*.swp
+
+# Testing directories and coverage reports
+.coverage
+.tox/
+.nox/
+.coverage.*
+nosetests.xml
+pytest*.xml
+*.cover
+
+# MyPy cache
+.mypy_cache/
+.dmypy.json
+.dmypy.json.*
+
+# pytest cache
+.cache/
+
+# macOS files (optional, but useful if working on macOS)
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Package manager dependencies (if using pipenv or poetry)
+Pipfile.lock
+poetry.lock
+
+# Other Python-related caches and temporary files
+*.log
+*.bak
+*.tmp
