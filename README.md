@@ -88,7 +88,7 @@ The rush (ラッシュ) `mode` has `levels`:
 - level_4 (４ラッシュ)
 - level_5 (５ラッシュ)
 - level_6 (６ラッシュ)
-- level_7 (7ラッシュ)
+- level_7 (７ラッシュ)
 
 ### 🌟 Extra
 
@@ -139,5 +139,5 @@ your script.
 
 ## 📝 Changelog
 
-v0.1.0 — Initial release (based on 漢字でGO! v1.1.2.2b).
-v0.1.1 — Included 7ラッシュ and improved stability.
+- v0.1.0 — Initial release (based on 漢字でGO! v1.1.2.2b).
+- v0.1.1 — Included ７ラッシュ and improved stability.
