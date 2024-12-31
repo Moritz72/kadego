@@ -12,6 +12,7 @@ class Runner:
     A `Runner` can launch a `Bot` and an `Observer` to monitor the bot's
     activity.
     """
+
     def __init__(self, bot: Bot, observer: Observer) -> None:
         """Initializes the runner with a bot and an optional observer.
 
@@ -34,4 +35,7 @@ class Runner:
         await self.bot.launch()
 
         while not self.stop_event.is_set():
-            await self.bot.run()
+            try:
+                await self.bot.run()
+            except TimeoutError:
+                await self.bot.reload()

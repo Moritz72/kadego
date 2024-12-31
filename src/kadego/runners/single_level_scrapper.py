@@ -16,6 +16,7 @@ class SingleLevelScraper(Runner):
     `CuriousStrategy` as well as a `SingleLevelWordsLogger` to log the
     scraped words and a `ProgressBarObserver` to display the progress.
     """
+
     def __init__(self, kadego: Page, level: int, path: str) -> None:
         """Initializes the runner with all its components.
 

@@ -8,17 +8,15 @@ from playwright.async_api import Page
 from ..exceptions.invalid_bot_configuration_error import InvalidBotConfigurationError
 from ..loggers.base_logger import BaseLogger
 from ..loggers.logger import Logger
+from ..strategies.always_correct_strategy import AlwaysCorrectStrategy
 from ..strategies.strategy import Strategy
 from ..utils.game_status import GameStatus
+from ..utils.menu_navigator import MenuNavigator
 from ..utils.playwright import get_game_variables, press_key, press_key_sequence
 from ..utils.question_outcome import QuestionOutcome
+from ..utils.speed import Speed
 from ..world_maps.kanji_de_go_map import KanjiDeGoMap
 from ..world_maps.world_map import WorldMap
-
-SHORT = .1
-MEDIUM = 1
-LONG = 10
-SOLUTION = 1
 
 
 class Bot:
@@ -29,17 +27,18 @@ class Bot:
     play through rounds by answering questions using the specified `Strategy`.
     Additonally, question data can be logged by a given `Logger`.
     """
+
     def __init__(
-            self,
-            kadego: Page,
-            mode: str,
-            level: str,
-            strategy: Strategy,
-            lives: int = 5,
-            questions: int = 16,
-            logger: Logger | None = None,
-            world_map: WorldMap | None = None,
-            speed: float = 1.
+        self,
+        kadego: Page,
+        mode: str,
+        level: str,
+        strategy: Strategy,
+        lives: int = 5,
+        questions: int = 16,
+        logger: Logger | None = None,
+        world_map: WorldMap | None = None,
+        speed: float = 1.0,
     ) -> None:
         """Initializes the bot with necessary parameters.
 
@@ -64,6 +63,9 @@ class Bot:
         self.world_map: WorldMap = world_map or KanjiDeGoMap()
         self.speed: float = speed
 
+        self.navigator: MenuNavigator = MenuNavigator(
+            self.kadego, self.world_map, self.speed
+        )
         self.game_status: GameStatus = GameStatus(0, 0)
         self.status: str = "Initialized"
 
@@ -75,13 +77,19 @@ class Bot:
             raise InvalidBotConfigurationError(f"Invalid mode: {self.mode}")
 
         if self.level not in self.world_map.mode_levels.get(self.mode, []):
-            raise InvalidBotConfigurationError(f"Invalid level: {self.level} for mode: {self.mode}")
+            raise InvalidBotConfigurationError(
+                f"Invalid level: {self.level} for mode: {self.mode}"
+            )
 
         if not (0 < self.lives < 6):
-            raise InvalidBotConfigurationError(f"Invalid number of lives: {self.lives}. Must be between 1 and 5.")
+            raise InvalidBotConfigurationError(
+                f"Invalid number of lives: {self.lives}. Must be between 1 and 5."
+            )
 
         if self.questions not in (7, 10, 16):
-            raise InvalidBotConfigurationError(f"Invalid number of questions: {self.questions}. Must be 7, 10, or 16.")
+            raise InvalidBotConfigurationError(
+                f"Invalid number of questions: {self.questions}. Must be 7, 10, or 16."
+            )
 
     def _get_new_game_status(self) -> GameStatus:
         """Returns a new game status object based on the specified lives and
@@ -101,82 +109,29 @@ class Bot:
         """
         await asyncio.sleep(delay * self.speed)
 
-    async def _start_game(self) -> None:
-        """Starts the game."""
-        self.status = "Waiting for game to start"
-        selector = "#_111_input"
-        await self.kadego.wait_for_selector(selector)
-        await self.kadego.press(selector, "Enter")
-        await self._wait(LONG)
+    async def _clear_hell(self) -> None:
+        """Clears hell once, then restarts the game."""
+        self.status = "Clearing 'Hell'"
+        strategy_temp = self.strategy
+        logger_temp = self.logger
+        self.strategy = AlwaysCorrectStrategy()
+        self.logger = BaseLogger()
 
-    async def _click_through_popups(self) -> None:
-        """Clicks through the popups at the start of the game."""
-        self.status = "Clicking through popups"
-        keys = self.world_map.get_popups()
-        await press_key_sequence(self.kadego, keys, MEDIUM)
-        await self._wait(LONG)
+        await self.navigator.start_round("main", "hell", self.lives, self.questions)
+        await self.run()
+        await self.reload()
 
-    async def _navigate_to_mode(self) -> None:
-        """Navigates to the specified mode."""
-        self.status = f"Navigating to mode '{self.mode}'"
-        keys = self.world_map.get_mode_direction(self.mode) * ["ArrowRight"]
-        await press_key_sequence(self.kadego, keys, SHORT)
+        self.strategy = strategy_temp
+        self.logger = logger_temp
 
-    async def _enter_mode(self) -> None:
-        """Enters the specified mode."""
-        self.status = f"Entering mode '{self.mode}'"
-        await press_key(self.kadego, "Enter")
-        await self._wait(MEDIUM)
+    async def _navigate(self) -> None:
+        """Navigates through the menu."""
+        self.status = "Navigating menu"
+        await self.navigator.start_round(
+            self.mode, self.level, self.lives, self.questions
+        )
 
-    async def _click_through_mode_popups(self) -> None:
-        """Clicks through the popups of the mode."""
-        self.status = "Clicking through mode popups"
-        keys = self.world_map.get_mode_popups(self.mode)
-        await press_key_sequence(self.kadego, keys, MEDIUM)
-        await self._wait(MEDIUM)
-
-    async def _navigate_to_level(self) -> None:
-        """Navigates to the specified level."""
-        self.status = f"Navigating to level '{self.level}'"
-        keys = self.world_map.get_level_direction(self.mode, self.level) * ["ArrowRight"]
-        await press_key_sequence(self.kadego, keys, SHORT)
-        await self._wait(MEDIUM)
-
-    async def _set_lives(self) -> None:
-        """Sets the number of lives."""
-        self.status = f"Setting lives to '{self.lives}'"
-        await press_key(self.kadego, "ArrowDown")
-        await self._wait(MEDIUM)
-        keys = 2 * ["ArrowDown"] + (self.lives - 1) * ["ArrowRight"] + ["Enter", "Shift"]
-        await press_key_sequence(self.kadego, keys, SHORT)
-        await self._wait(MEDIUM)
-
-    async def _enter_level(self) -> None:
-        """Enters the specified level."""
-        self.status = f"Entering level '{self.level}'"
-        await press_key(self.kadego, "Enter")
-        await self._wait(MEDIUM)
-
-    async def _click_through_level_popups(self) -> None:
-        """Clicks through the popups of the level."""
-        self.status = "Clicking through mode popups"
-        keys = self.world_map.get_mode_level_popups(self.mode, self.level)
-        await press_key_sequence(self.kadego, keys, MEDIUM)
-        await self._wait(MEDIUM)
-
-    async def _set_questions(self) -> None:
-        """Sets the number of questions."""
-        self.status = f"Setting questions to '{self.questions}'"
-        keys = {7: 2, 10: 1, 16: 0}[self.questions] * ["ArrowUp"]
-        await press_key_sequence(self.kadego, keys, SHORT)
-        await self._wait(MEDIUM)
-
-    async def _start_round(self) -> None:
-        """Starts a round."""
-        self.status = "Starting level"
-        await press_key(self.kadego, "Enter")
-
-    async def _wait_for_round_to_load(self) -> bool:
+    async def _wait_for_round_to_load(self) -> None:
         """Waits for some time for the round to load.
 
         Returns:
@@ -186,10 +141,10 @@ class Bot:
         for _ in range(60):
             element = await self.kadego.query_selector(selector)
             if element:
-                return True
+                return
             await press_key(self.kadego, "Space")
-            await self._wait(MEDIUM)
-        return False
+            await self._wait(Speed.MEDIUM.value)
+        raise TimeoutError
 
     async def _wait_for_question(self) -> None:
         """Waits for the next question."""
@@ -230,7 +185,7 @@ class Bot:
             outcome (QuestionOutcome): The outcome of the question.
         """
         self.status = f"Waiting for solution"
-        await self._wait(SOLUTION)
+        await self._wait(Speed.MEDIUM.value)
         game_variables = await get_game_variables(self.kadego)
         self.logger.log(game_variables)
         if not outcome.skipped and not outcome.correct:
@@ -240,10 +195,7 @@ class Bot:
         """Waits for a new round to start, reloading the game if stuck."""
         self.status = "Waiting for round to load"
         self.game_status: GameStatus = self._get_new_game_status()
-        ok = await self._wait_for_round_to_load()
-        while not ok:
-            await self.reload()
-            ok = await self._wait_for_round_to_load()
+        await self._wait_for_round_to_load()
 
     async def _answer_questions_loop(self) -> None:
         """Waits for and answers questions in a loop until the game is
@@ -259,39 +211,28 @@ class Bot:
         animation to finish."""
         self.status = "Waiting for game to finish"
         if self.game_status.is_win():
-            await self._wait(LONG)
+            await self._wait(Speed.LONG.value)
         else:
-            await self._wait(SHORT)
+            await self._wait(Speed.SHORT.value)
 
     async def _retry(self) -> None:
         """Starts a new round by retrying."""
         self.status = "Retrying"
         keys = 2 * ["ArrowDown"]
-        await press_key_sequence(self.kadego, keys, SHORT)
+        await press_key_sequence(self.kadego, keys, Speed.SHORT.value)
         self.game_status = self._get_new_game_status()
 
     async def launch(self) -> None:
         """Navigates through the game performing all necessary setup and
         finally starts a round."""
-        await self._start_game()
-        await self._click_through_popups()
-        await self._navigate_to_mode()
-        await self._enter_mode()
-        await self._click_through_mode_popups()
-        await self._navigate_to_level()
-        await self._set_lives()
-        await self._enter_level()
-        await self._click_through_level_popups()
-        await self._set_questions()
-        await self._start_round()
+        if (self.mode, self.level, self.navigator.mode) == ("rush", "level_7", None):
+            await self._clear_hell()
+        await self._navigate()
 
     async def reload(self) -> None:
         """Reloads the game and starts a new round again."""
-        await self.kadego.reload()
-        await self._start_game()
-        await self._enter_mode()
-        await self._enter_level()
-        await self._start_round()
+        await self.navigator.reload()
+        await self.launch()
 
     async def run(self) -> None:
         """Runs the bot for one round of play."""

@@ -1,3 +1,6 @@
+# Standard Library Imports
+import re
+
 # Local Imports
 from .json_file_logger import JsonFileLogger
 
@@ -19,15 +22,30 @@ class WordData:
         data = game_variables["_data"]
 
         self.index: str = str(data[6])
-        self.readings: list[str] = [
-            self._filter_reading(reading) for reading in data[9:12]
-        ]
+        self.readings: list[str] = [self._filter(reading) for reading in data[9:12]]
         self.readings = [
             reading for reading in self.readings if self._is_reading(reading)
         ]
-        self.meanings: list[str] = [
-            meaning for meaning in data[19:21] if self._is_meaning(meaning)
+        self.meanings: list[str] = [self._filter(meaning) for meaning in data[19:21]]
+        self.meanings = [
+            meaning for meaning in self.meanings if self._is_meaning(meaning)
         ]
+
+    @classmethod
+    def _filter(cls, string: str) -> str:
+        """Removes unwanted characters from a string.
+
+        Args:
+            string (str): The string to be filtered.
+
+        Returns:
+            str: The filtered string with unwanted characters removed.
+        """
+        string = string.replace("₨", "")
+        string = string.replace("\x1bI[48]", "𥝱")
+        string = re.sub(r"\x1bI\[.*?]", "", string)
+        string = re.sub(r"\x1bc\[.*?]", "", string)
+        return string
 
     @classmethod
     def _is_reading(cls, reading: str) -> bool:
@@ -40,21 +58,6 @@ class WordData:
             bool: True if the reading is not a dummy, False if it is a dummy.
         """
         return reading != "000000000000000000000"
-
-    @classmethod
-    def _filter_reading(cls, reading: str) -> str:
-        """Filters unwanted characters from a reading.
-
-        Args:
-            reading (str): The reading string to be filtered.
-
-        Returns:
-            str: The filtered reading with unwanted characters removed.
-        """
-        strings_to_remove = ["\x1bc[0]", "\u001bc[6]", "₨"]
-        for string in strings_to_remove:
-            reading = reading.replace(string, "")
-        return reading
 
     @classmethod
     def _is_meaning(cls, meaning: str) -> bool:

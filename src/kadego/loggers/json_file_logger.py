@@ -37,7 +37,10 @@ class JsonFileLogger(Logger):
 
     def _write_data(self) -> None:
         """Writes the current log data to the specified JSON file."""
-        data_lines = [f'  "{key}": {json.dumps(value, ensure_ascii=False)}' for key, value in self.data.items()]
+        data_lines = [
+            f'  "{key}": {json.dumps(value, ensure_ascii=False)}'
+            for key, value in self.data.items()
+        ]
         data_string = "{\n" + ",\n".join(data_lines) + "\n}"
 
         with open(self.path, "w", encoding="utf-8") as file:

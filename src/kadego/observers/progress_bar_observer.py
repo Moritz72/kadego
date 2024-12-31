@@ -7,7 +7,6 @@ from tqdm import tqdm
 # Local Imports
 from .periodic_observer import PeriodicObserver
 from ..bots import Bot
-from ..exceptions import IncompatibleBotError
 from ..loggers import SingleLevelWordsLogger
 
 
@@ -22,7 +21,7 @@ class ProgressBarObserver(PeriodicObserver):
     collected the `Runner` will be stopped from running the `Bot`.
     """
 
-    def __init__(self, bot: Bot, delay: float = .2) -> None:
+    def __init__(self, bot: Bot, delay: float = 0.1) -> None:
         """Initializes the observer given a bot and delay.
 
         Args:
@@ -30,10 +29,7 @@ class ProgressBarObserver(PeriodicObserver):
             delay (float, optional): The delay (in seconds) between each observation cycle (default is 0.2).
         """
         super().__init__(bot, delay)
-        if not isinstance(bot.logger, SingleLevelWordsLogger):
-            raise IncompatibleBotError("The logger of the bot must be an instance of 'SingleLevelWordsLogger'.")
-        assert isinstance(self.bot.logger, SingleLevelWordsLogger)
-        self.progress_bar: tqdm = tqdm(total=len(self.bot.logger.data))
+        self.progress_bar: tqdm = tqdm(total=None)
 
     def _loop_function(self, stop_event: asyncio.Event) -> None:
         """Updates the progress bar based on the bot's logger data and stops
@@ -43,8 +39,13 @@ class ProgressBarObserver(PeriodicObserver):
         Args:
             stop_event (asyncio.Event): Event that when set stops the runner from running the bot.
         """
-        assert isinstance(self.bot.logger, SingleLevelWordsLogger)
-        non_nones = sum(1 for value in self.bot.logger.data.values() if value is not None)
+        if isinstance(self.bot.logger, SingleLevelWordsLogger):
+            data = self.bot.logger.data
+            self.progress_bar.total = len(data)
+            values = data.values()
+            non_nones = sum(value is not None for value in values)
+        else:
+            non_nones = 0
 
         self.progress_bar.set_description(self.bot.status[:50].ljust(50))
         self.progress_bar.n = non_nones

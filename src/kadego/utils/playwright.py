@@ -49,9 +49,12 @@ async def press_key(page: Page, key: str) -> None:
         page (Page): The Playwright Page object.
         key (str): The key to press.
     """
-    await page.keyboard.down(key)
-    await asyncio.sleep(KEY_PRESS_HOLD_DOWN)
-    await page.keyboard.up(key)
+    keys = key.split("+")
+    for k in keys:
+        await page.keyboard.down(k)
+        await asyncio.sleep(KEY_PRESS_HOLD_DOWN)
+    for k in keys[::-1]:
+        await page.keyboard.up(k)
 
 
 async def press_key_sequence(page: Page, keys: Sequence[str], delay: float) -> None:

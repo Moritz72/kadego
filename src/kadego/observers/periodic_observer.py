@@ -14,7 +14,7 @@ class PeriodicObserver(Observer):
     for a specified amount of time.
     """
 
-    def __init__(self, bot: Bot, delay: float = .2) -> None:
+    def __init__(self, bot: Bot, delay: float = 0.1) -> None:
         """Initializes the observer given a bot and delay.
 
         Args:

@@ -25,6 +25,7 @@ RUSH_LEVELS = {
     "level_4": 3,
     "level_5": 4,
     "level_6": 5,
+    "level_7": 5,
 }
 EXTRA_LEVELS = {"math": 0, "math_hard": 1, "english": 2, "elements": 3}
 MODE_LEVELS = {
@@ -38,10 +39,14 @@ POPUPS = ["Space", "Shift", "Space", "Shift", "Space"]
 MODE_POPUPS = {"main": ["Space"]}
 MODE_LEVEL_POPUPS = {"main": {"hell": ["Space"]}}
 
+ROUND_STARTS = {"rush": {"level_7": ["ArrowRight+Space"]}}
+
 
 class KanjiDeGoMap(WorldMap):
     """A `WorldMap` of 漢字でGO!."""
 
     def __init__(self) -> None:
         """Initializes the WorldMap of 漢字でGO!"""
-        super().__init__(MODES, MODE_LEVELS, POPUPS, MODE_POPUPS)
+        super().__init__(
+            MODES, MODE_LEVELS, POPUPS, MODE_POPUPS, MODE_LEVEL_POPUPS, ROUND_STARTS
+        )

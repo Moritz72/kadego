@@ -16,7 +16,7 @@ class TimeOutObserver(PeriodicObserver):
     be stopped from running the `Bot`.
     """
 
-    def __init__(self, bot: Bot, timeout: float, delay: float = .2) -> None:
+    def __init__(self, bot: Bot, timeout: float, delay: float = 0.1) -> None:
         """Initializes the observer given a bot and delay.
 
         Args:
